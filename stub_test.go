@@ -6,35 +6,49 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
 	"go.abhg.dev/testing/stub"
 )
 
 func TestValue(t *testing.T) {
 	v := 42
+
 	restore := stub.Value(&v, 43)
-	assert.Equal(t, 43, v)
+	if v != 43 {
+		t.Errorf("got %d, want 43", v)
+	}
+
 	restore()
-	assert.Equal(t, 42, v)
+	if v != 42 {
+		t.Errorf("got %d, want 42", v)
+	}
 }
 
 func TestFunc(t *testing.T) {
 	fn := func() int { return 42 }
 
 	restore := stub.Func(&fn, 43)
-	assert.Equal(t, 43, fn())
+	if fn() != 43 {
+		t.Errorf("got %d, want 43", fn())
+	}
+
 	restore()
-	assert.Equal(t, 42, fn())
+	if fn() != 42 {
+		t.Errorf("got %d, want 42", fn())
+	}
 }
 
 func TestFuncNilIsZero(t *testing.T) {
 	fn := func() int { return 42 }
 
 	restore := stub.Func(&fn, nil)
-	assert.Equal(t, 0, fn())
+	if fn() != 0 {
+		t.Errorf("got %d, want 0", fn())
+	}
+
 	restore()
-	assert.Equal(t, 42, fn())
+	if fn() != 42 {
+		t.Errorf("got %d, want 42", fn())
+	}
 }
 
 func TestFuncCast(t *testing.T) {
@@ -43,40 +57,70 @@ func TestFuncCast(t *testing.T) {
 	restore := stub.Func(&fn, bytes.NewBufferString("world"))
 
 	got1, err := io.ReadAll(fn())
-	require.NoError(t, err)
-	assert.Equal(t, "world", string(got1))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if string(got1) != "world" {
+		t.Errorf("got %q, want 'world'", got1)
+	}
 
 	restore()
 
 	got2, err := io.ReadAll(fn())
-	require.NoError(t, err)
-	assert.Equal(t, "hello", string(got2))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if string(got2) != "hello" {
+		t.Errorf("got %q, want 'hello'", got2)
+	}
 }
 
 func TestFuncErrors(t *testing.T) {
 	t.Run("NotAPointer", func(t *testing.T) {
-		assert.PanicsWithValue(t, "want pointer, got func() int", func() {
+		pval := expectPanic(t, func() {
 			stub.Func(func() int { return 0 }, 43)
 		})
+		if want := "want pointer, got func() int"; pval != want {
+			t.Errorf("got %q, want %q", pval, want)
+		}
 	})
 
 	t.Run("NotAFunctionPointer", func(t *testing.T) {
-		assert.PanicsWithValue(t, "want pointer to function, got *int", func() {
+		pval := expectPanic(t, func() {
 			stub.Func(new(int), 43)
 		})
+		if want := "want pointer to function, got *int"; want != pval {
+			t.Errorf("got %q, want %q", pval, want)
+		}
 	})
 
 	t.Run("ReturnMismatch", func(t *testing.T) {
 		fn := func() int { return 42 }
-		assert.PanicsWithValue(t, "want 1 return value(s), got 2", func() {
+		pval := expectPanic(t, func() {
 			stub.Func(&fn, 43, 44)
 		})
+		if want := "want 1 return value(s), got 2"; want != pval {
+			t.Errorf("got %q, want %q", pval, want)
+		}
 	})
 
 	t.Run("ReturnNotAssignable", func(t *testing.T) {
 		fn := func() int { return 42 }
-		assert.PanicsWithValue(t, "return type string (0) is not assignable to int", func() {
+		pval := expectPanic(t, func() {
 			stub.Func(&fn, "hello")
 		})
+		if want := "return type string (0) is not assignable to int"; want != pval {
+			t.Errorf("got %q, want %q", pval, want)
+		}
 	})
+}
+
+func expectPanic(t testing.TB, fn func()) (pval any) {
+	t.Helper()
+
+	defer func() { pval = recover() }()
+	fn()
+
+	t.Fatalf("expected panic, got nil")
+	return nil
 }
