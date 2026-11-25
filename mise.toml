@@ -1,9 +1,9 @@
 [tools]
 go = "latest"
-"aqua:golangci/golangci-lint" = "latest"
-"ubi:miniscruff/changie" = "latest"
-"ubi:abhinav/doc2go" = "latest"
+golangci-lint = "latest"
+changie = "latest"
 gofumpt = "latest"
+"github:abhinav/doc2go" = "latest"
 
 [tasks.all]
 description = "Build, lint and test the code."

@@ -67,7 +67,7 @@ func Value[T any](ptr *T, value T) (restore func()) {
 //	}
 func Func(fnptr any, rets ...any) (restore func()) {
 	fnptrv := reflect.ValueOf(fnptr)
-	if fnptrv.Kind() != reflect.Ptr {
+	if fnptrv.Kind() != reflect.Pointer {
 		panic(fmt.Sprintf("want pointer, got %T", fnptr))
 	}
 
